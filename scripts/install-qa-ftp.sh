@@ -102,6 +102,11 @@ sync_sources() {
   local source_dir="$1"
   local target_dir="$2"
 
+  if [[ ! -f "${source_dir}/package.json" ]]; then
+    echo "Source directory '${source_dir}' does not contain package.json; use --source-dir to point to the repository root." >&2
+    exit 1
+  fi
+
   mkdir -p "$target_dir"
   rsync -a --delete \
     --exclude '.git' \
@@ -354,6 +359,7 @@ main() {
   local service_user="quableapp"
   local service_name="quable-customapp"
   local node_major="20"
+  local source_dir=""
   local app_host_url=""
   local instance_name=""
   local api_token=""
@@ -399,6 +405,10 @@ main() {
         node_major="$2"; shift 2 ;;
       --node-major=*)
         node_major="${1#*=}"; shift 1 ;;
+      --source-dir)
+        source_dir="$2"; shift 2 ;;
+      --source-dir=*)
+        source_dir="${1#*=}"; shift 1 ;;
       --database-url)
         database_url="$2"; shift 2 ;;
       --database-url=*)
@@ -436,10 +446,19 @@ main() {
   create_service_user "$service_user" "$install_dir"
 
   local repo_root
-  repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)
+  if [[ -n "$source_dir" ]]; then
+    repo_root=$(cd "$source_dir" && pwd -P)
+  else
+    repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)
+  fi
 
   sync_sources "$repo_root" "$install_dir"
   chown -R "$service_user":"$service_user" "$install_dir"
+
+  if [[ ! -f "${install_dir}/package.json" ]]; then
+    echo "package.json missing in ${install_dir}; verify --source-dir points to the project root containing package.json." >&2
+    exit 1
+  fi
 
   write_env_file "$install_dir/.env" "$database_url" "$app_port" "$app_host_url"
   chown "$service_user":"$service_user" "$install_dir/.env"
