@@ -9,7 +9,7 @@ usage() {
 Usage: install-qa-ftp.sh --app-host-url URL --instance-name NAME --quable-api-token TOKEN --quable-app-secret SECRET [options]
 
 Required arguments:
-  --app-host-url        Public URL exposed to Quable PIM (e.g., https://qa-ftp.quable.io/automation/quableapp)
+  --app-host-url        Public URL exposed to Quable PIM (default: https://qa-ftp.quable.io/quableapps/helloworld)
   --instance-name       Quable instance name stored in the database
   --quable-api-token    Full access API token for the instance
   --quable-app-secret   HMAC secret provided by Quable for this app
@@ -21,6 +21,7 @@ Optional arguments:
   --service-name NAME   Systemd service name (default: quable-customapp)
   --node-major VERSION  Node.js major version to install if missing/too old (default: 20)
   --database-url URL    Override Prisma DATABASE_URL (default: file:{install-dir}/database/dev.db)
+  --source-dir PATH     Source directory to copy (default: /var/www/source-quable-customapp-helloworld)
   --reset-sqlite-db     Remove existing SQLite database files before running migrations (default: enabled)
   --keep-sqlite-db      Preserve an existing SQLite file (may fail if schema already exists)
   --configure-nginx     Update Nginx to proxy the app_host_url to the Node service and reload (default: enabled)
@@ -408,8 +409,8 @@ main() {
   local service_user="quableapp"
   local service_name="quable-customapp"
   local node_major="20"
-  local source_dir=""
-  local app_host_url=""
+  local source_dir="/var/www/source-quable-customapp-helloworld"
+  local app_host_url="https://qa-ftp.quable.io/quableapps/helloworld"
   local instance_name=""
   local api_token=""
   local app_secret=""
