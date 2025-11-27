@@ -67,6 +67,23 @@ npx prisma generate
 npx prisma studio
 ```
 
+## 🤖 Déploiement automatisé sur qa-ftp
+
+Un script complémentaire au bootstrap qa-ftp (FTP/MariaDB/Nginx déjà déployé) est disponible pour installer et configurer automatiquement l'application en service systemd.
+
+> Prérequis : le script cible Ubuntu 22.04.5 LTS (Jammy) et arrête l'exécution si l'OS détecté ne correspond pas.
+
+```bash
+sudo ./scripts/install-qa-ftp.sh \
+  --app-host-url "https://qa-ftp.quable.io/automation/quableapp-node" \
+  --instance-name "mon-instance" \
+  --quable-api-token "<token_full_access>" \
+  --quable-app-secret "<secret_hmac>" \
+  --app-port 4000
+```
+
+Options utiles pour la CI : `--install-dir` (chemin d'installation), `--service-name` (nom systemd), `--service-user` (utilisateur système), `--database-url` (URL Prisma), `--node-major` (version Node.js minimale). Le script recopie le dépôt vers l'hôte, installe les dépendances, exécute les migrations Prisma, injecte l'instance Quable fournie et démarre le service. Par défaut, il insère aussi un `location` Nginx pointant l'URL d'exposition vers le port du service puis recharge Nginx (désactivable via `--no-configure-nginx`). Avant d'injecter ce `location`, le script balaye les déclarations déjà présentes dans la configuration Nginx pour éviter toute collision avec des routes existantes. **Attention :** l'URL d'exposition ne doit pas être `/automation/quableapp` car cette route est déjà servie par Nginx/PHP sur qa-ftp ; utilisez une route dédiée (par exemple `/automation/quableapp-node`).
+
 ## 🏃 Utilisation
 
 ### Démarrage
