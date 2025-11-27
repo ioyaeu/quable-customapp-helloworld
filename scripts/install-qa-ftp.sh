@@ -60,7 +60,12 @@ assert_ubuntu_compatibility() {
 }
 
 ensure_dependencies() {
-  apt-get update -y
+  echo "Refreshing apt cache (accepting label changes on existing repositories)..."
+  if ! apt-get update -y -o Acquire::AllowReleaseinfoChange::Label=true; then
+    echo "apt-get update failed; retrying without label override..." >&2
+    apt-get update -y
+  fi
+
   apt-get install -y ca-certificates curl git rsync sqlite3
 }
 

@@ -73,6 +73,10 @@ Un script complémentaire au bootstrap qa-ftp (FTP/MariaDB/Nginx déjà déploy�
 
 > Prérequis : le script cible Ubuntu 22.04.5 LTS (Jammy) et arrête l'exécution si l'OS détecté ne correspond pas.
 
+> À noter : le script n'a pas besoin de Docker ni d'ajouter de dépôt tiers supplémentaire ; il se contente de rafraîchir l'APT
+> existant avec l'option `Acquire::AllowReleaseinfoChange::Label=true` pour accepter automatiquement les changements d'étiquette
+> des dépôts déjà configurés (par exemple un PPA PHP). Si un dépôt a changé de label, l'exécution continue sans interaction.
+
 ```bash
 sudo ./scripts/install-qa-ftp.sh \
   --app-host-url "https://qa-ftp.quable.io/automation/quableapp-node" \
