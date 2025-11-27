@@ -103,7 +103,11 @@ sync_sources() {
   local target_dir="$2"
 
   if [[ ! -f "${source_dir}/package.json" ]]; then
-    echo "Source directory '${source_dir}' does not contain package.json; use --source-dir to point to the repository root." >&2
+    if [[ -f "${source_dir}/package-lock.json" ]]; then
+      echo "Source directory '${source_dir}' only has package-lock.json; copy the full repository (including package.json) or set --source-dir to the project root." >&2
+    else
+      echo "Source directory '${source_dir}' does not contain package.json; use --source-dir to point to the repository root." >&2
+    fi
     exit 1
   fi
 
