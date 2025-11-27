@@ -21,6 +21,8 @@ Optional arguments:
   --service-name NAME   Systemd service name (default: quable-customapp)
   --node-major VERSION  Node.js major version to install if missing/too old (default: 20)
   --database-url URL    Override Prisma DATABASE_URL (default: file:{install-dir}/database/dev.db)
+  --reset-sqlite-db     Remove existing SQLite database files before running migrations (default: enabled)
+  --keep-sqlite-db      Preserve an existing SQLite file (may fail if schema already exists)
   --configure-nginx     Update Nginx to proxy the app_host_url to the Node service and reload (default: enabled)
   --no-configure-nginx  Skip Nginx configuration (useful if handled externally)
   --help                Show this help
@@ -141,6 +143,49 @@ install_dependencies_and_build() {
   npx prisma generate
   npm run build
   popd >/dev/null
+}
+
+normalize_file_url_path() {
+  local url="$1"
+
+  # Handle file:/absolute/path and sqlite:/absolute/path forms
+  if [[ "$url" =~ ^file:(.*)$ ]]; then
+    echo "${BASH_REMATCH[1]}"
+  elif [[ "$url" =~ ^sqlite:(.*)$ ]]; then
+    echo "${BASH_REMATCH[1]}"
+  else
+    echo ""
+  fi
+}
+
+prepare_sqlite_database() {
+  local database_url="$1"
+  local reset_sqlite_db="$2"
+
+  local db_path
+  db_path=$(normalize_file_url_path "$database_url")
+
+  if [[ -z "$db_path" ]]; then
+    return 0
+  fi
+
+  # Expand tilde or relative paths defensively
+  if [[ "$db_path" == ~* ]]; then
+    db_path="${db_path/#~/$HOME}"
+  elif [[ "$db_path" != /* ]]; then
+    db_path="$(pwd)/$db_path"
+  fi
+
+  mkdir -p "$(dirname "$db_path")"
+
+  if [[ -f "$db_path" ]]; then
+    if [[ "$reset_sqlite_db" == "true" ]]; then
+      echo "Removing existing SQLite database at ${db_path} to avoid Prisma baseline conflicts..."
+      rm -f "$db_path"
+    else
+      echo "Keeping existing SQLite database at ${db_path}; Prisma migrations may fail if tables already exist."
+    fi
+  fi
 }
 
 seed_instance() {
@@ -370,6 +415,7 @@ main() {
   local app_secret=""
   local database_url=""
   local configure_nginx="true"
+  local reset_sqlite_db="true"
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -417,6 +463,10 @@ main() {
         database_url="$2"; shift 2 ;;
       --database-url=*)
         database_url="${1#*=}"; shift 1 ;;
+      --reset-sqlite-db)
+        reset_sqlite_db="true"; shift 1 ;;
+      --keep-sqlite-db|--no-reset-sqlite-db)
+        reset_sqlite_db="false"; shift 1 ;;
       --configure-nginx)
         configure_nginx="true"; shift 1 ;;
       --no-configure-nginx|--skip-nginx)
@@ -468,6 +518,7 @@ main() {
   chown "$service_user":"$service_user" "$install_dir/.env"
 
   export DATABASE_URL="$database_url"
+  prepare_sqlite_database "$database_url" "$reset_sqlite_db"
   install_dependencies_and_build "$install_dir"
   seed_instance "$install_dir" "$instance_name" "$api_token" "$app_secret"
 
