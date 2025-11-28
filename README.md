@@ -67,6 +67,43 @@ npx prisma generate
 npx prisma studio
 ```
 
+## 🤖 Déploiement automatisé sur qa-ftp
+
+Un script complémentaire au bootstrap qa-ftp (FTP/MariaDB/Nginx déjà déployé) est disponible pour installer et configurer automatiquement l'application en service systemd.
+
+> Prérequis : le script cible Ubuntu 22.04.5 LTS (Jammy) et arrête l'exécution si l'OS détecté ne correspond pas.
+
+> À noter : le script n'a pas besoin de Docker ni d'ajouter de dépôt tiers supplémentaire ; il se contente de rafraîchir l'APT
+> existant avec l'option `Acquire::AllowReleaseinfoChange::Label=true` pour accepter automatiquement les changements d'étiquette
+> des dépôts déjà configurés (par exemple un PPA PHP). Si un dépôt a changé de label, l'exécution continue sans interaction.
+
+```bash
+sudo ./scripts/install-customapp-helloworld.sh \
+  --app-host-url "https://qa-ftp.quable.io/quableapps/helloworld" \
+  --instance-name "mon-instance" \
+  --quable-api-token "<token_full_access>" \
+  --quable-app-secret "<secret_hmac>" \
+  --app-port 4000
+```
+
+Options utiles pour la CI : `--install-dir` (chemin d'installation), `--service-name` (nom systemd), `--service-user` (utilisateur système), `--database-url` (URL Prisma), `--node-major` (version Node.js minimale), `--source-dir` (chemin du dépôt à recopier si le script est lancé depuis un autre dossier, défaut : `/var/www/source-quable-customapp-helloworld`), `--base-path` (chemin d'exposition par défaut `/quableapps/helloworld`), `--reset-sqlite-db`/`--keep-sqlite-db` (forcer ou empêcher la suppression du fichier SQLite existant avant les migrations). Le script recopie le dépôt vers l'hôte (en essayant d'abord de dézipper `/var/www/quable-customapp-helloworld.zip` vers `/var/www/source-quable-customapp-helloworld` si nécessaire), installe les dépendances, exécute les migrations Prisma (en supprimant par défaut un fichier SQLite déjà présent pour éviter l'erreur Prisma `P3005`), injecte l'instance Quable fournie et démarre le service. **Attention :** l'URL d'exposition ne doit pas être `/automation/quableapp` car cette route est déjà servie par Nginx/PHP sur qa-ftp ; utilisez une route dédiée placée en dehors du préfixe `/automation`, par exemple `/quableapps/helloworld` (valeur proposée par défaut). Si le script est copié seul en dehors du dépôt,fournissez `--source-dir` pour pointer vers la racine du projet (celle qui contient `package.json`). S'il n'y a qu'un `package-lock.json` dans le dossier source, recopiez le dépôt complet ou un artefact de build contenant aussi `package.json` avant de lancer le script.
+
+Ajoutez ensuite manuellement le reverse proxy Nginx pointant vers le port du service (à placer avant les blocs `/automation`) :
+
+```nginx
+location /quableapps/helloworld {
+    proxy_pass http://127.0.0.1:4000;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection 'upgrade';
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+
 ## 🏃 Utilisation
 
 ### Démarrage
