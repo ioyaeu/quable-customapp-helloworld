@@ -1,49 +1,39 @@
-export function normalizeBasePath(rawBasePath?: string): string {
-  if (!rawBasePath || rawBasePath.trim() === '') {
+function normalizeHostUrl(hostUrl?: string) {
+  const rawHost = (hostUrl || '').trim();
+  return rawHost.replace(/\/+$/, '');
+}
+
+export function normalizeBasePath(basePath?: string) {
+  const rawBasePath = (basePath || '/').trim();
+
+  if (!rawBasePath || rawBasePath === '/') {
     return '/';
   }
 
-  let basePath = rawBasePath.trim();
+  const prefixed = rawBasePath.startsWith('/')
+    ? rawBasePath
+    : `/${rawBasePath}`;
 
-  if (!basePath.startsWith('/')) {
-    basePath = `/${basePath}`;
-  }
+  const withoutTrailingSlash = prefixed.replace(/\/+$/, '');
 
-  if (basePath.length > 1 && basePath.endsWith('/')) {
-    basePath = basePath.slice(0, -1);
-  }
-
-  return basePath;
+  return withoutTrailingSlash || '/';
 }
 
-export function stripBasePath(path: string, basePath: string): string {
-  if (!basePath || basePath === '/') {
-    return path || '/';
-  }
-
-  if (path === basePath) {
-    return '/';
-  }
-
-  if (path.startsWith(basePath)) {
-    const stripped = path.slice(basePath.length);
-    return stripped === '' ? '/' : stripped;
-  }
-
-  return path || '/';
+export function getAssetsBasePath(basePath: string) {
+  return basePath === '/' ? '' : basePath;
 }
 
-export function applyBasePath(hostUrl: string, basePath: string): string {
-  const normalizedHost = (hostUrl || '').replace(/\/$/, '');
-  const normalizedBasePath = normalizeBasePath(basePath);
+export function buildPublicUrl(pathname: string) {
+  const hostUrl = normalizeHostUrl(process.env.QUABLE_APP_HOST_URL);
+  const basePath = normalizeBasePath(process.env.QUABLE_APP_BASE_PATH);
 
-  if (!normalizedBasePath || normalizedBasePath === '/') {
-    return normalizedHost;
-  }
+  const normalizedPath = pathname.startsWith('/') ? pathname : `/${pathname}`;
+  const withBasePath =
+    basePath === '/'
+      ? normalizedPath
+      : `${basePath}${normalizedPath}`;
 
-  if (normalizedHost.endsWith(normalizedBasePath)) {
-    return normalizedHost;
-  }
-
-  return `${normalizedHost}${normalizedBasePath}`;
+  return `${hostUrl}${withBasePath}`;
 }
+
+export { normalizeHostUrl };
