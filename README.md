@@ -40,9 +40,11 @@ cp .env.dist .env
 
 Éditer `.env` :
 ```env
-DATABASE_URL=file:./dev.db 
+DATABASE_URL=file:./dev.db
 QUABLE_APP_PORT=4000
 QUABLE_APP_HOST_URL=https://votre-url.com
+# Optionnel : préfixe si l'app est servie derrière un sous-chemin (ex: /quableapps/helloworld)
+APP_BASE_PATH=/
 ```
 
 Pour l'URL, n'hésitez pas à utilier un tunnel pour que le PIM puisse joidnre votre application lancée localement.
@@ -86,6 +88,8 @@ sudo ./scripts/install-customapp-helloworld.sh \
   --app-port 4000
 ```
 
+> Définissez `QUABLE_APP_HOST_URL` sur le domaine public (ex: `https://qa-ftp.quable.io`) et `APP_BASE_PATH` sur le sous-chemin souhaité (ex: `/quableapps/helloworld`) pour éviter de doubler le chemin lors des vérifications HMAC.
+
 Options utiles pour la CI : `--install-dir` (chemin d'installation), `--service-name` (nom systemd), `--service-user` (utilisateur système), `--database-url` (URL Prisma), `--node-major` (version Node.js minimale), `--source-dir` (chemin du dépôt à recopier si le script est lancé depuis un autre dossier, défaut : `/var/www/source-quable-customapp-helloworld`), `--base-path` (chemin d'exposition par défaut `/quableapps/helloworld`), `--reset-sqlite-db`/`--keep-sqlite-db` (forcer ou empêcher la suppression du fichier SQLite existant avant les migrations). Le script recopie le dépôt vers l'hôte (en essayant d'abord de dézipper `/var/www/quable-customapp-helloworld.zip` vers `/var/www/source-quable-customapp-helloworld` si nécessaire), installe les dépendances, exécute les migrations Prisma (en supprimant par défaut un fichier SQLite déjà présent pour éviter l'erreur Prisma `P3005`), injecte l'instance Quable fournie et démarre le service. **Attention :** l'URL d'exposition ne doit pas être `/automation/quableapp` car cette route est déjà servie par Nginx/PHP sur qa-ftp ; utilisez une route dédiée placée en dehors du préfixe `/automation`, par exemple `/quableapps/helloworld` (valeur proposée par défaut). Si le script est copié seul en dehors du dépôt,fournissez `--source-dir` pour pointer vers la racine du projet (celle qui contient `package.json`). S'il n'y a qu'un `package-lock.json` dans le dossier source, recopiez le dépôt complet ou un artefact de build contenant aussi `package.json` avant de lancer le script.
 
 Ajoutez ensuite manuellement le reverse proxy Nginx pointant vers le port du service (à placer avant les blocs `/automation`) :
@@ -116,12 +120,14 @@ npm run build && npm start
 
 ### Endpoints
 
+Les endpoints sont servis sous le préfixe `APP_BASE_PATH` (par défaut `/`).
+
 | Endpoint | Méthode | Description |
 |----------|---------|-------------|
-| `/` | GET | Page de configuration |
-| `/` | POST | Lancement de slot |
-| `/webhook/{instance}` | POST | Réception webhooks |
-| `/slot/{slotName}` | GET | Affichage slot iframe |
+| `{APP_BASE_PATH}/` | GET | Page de configuration |
+| `{APP_BASE_PATH}/` | POST | Lancement de slot |
+| `{APP_BASE_PATH}/webhook/{instance}` | POST | Réception webhooks |
+| `{APP_BASE_PATH}/slot/{slotName}` | GET | Affichage slot iframe |
 
 ### Flow de fonctionnement
 

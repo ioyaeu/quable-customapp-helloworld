@@ -4,6 +4,7 @@ import { keyValueService } from './keyvalue.service';
 import { databaseService } from './database.service';
 import { Request } from 'express';
 import { createHmac, timingSafeEqual } from 'crypto';
+import { applyBasePath, normalizeBasePath } from '../helper/base-path';
 
 class AppService {
 
@@ -25,7 +26,15 @@ class AppService {
       }
 
       const { dataLocale, interfaceLocale, userId } = data;
-      response.url = `${process.env.QUABLE_APP_HOST_URL}/slot/${slot}?quableInstanceName=${instance}&dataLocale=${dataLocale}&interfaceLocale=${interfaceLocale}&userId=${userId}`;
+      const basePath = normalizeBasePath(
+        process.env.APP_BASE_PATH || process.env.QUABLE_APP_BASE_PATH,
+      );
+      const baseHost = applyBasePath(
+        process.env.QUABLE_APP_HOST_URL || '',
+        basePath,
+      );
+
+      response.url = `${baseHost}/slot/${slot}?quableInstanceName=${instance}&dataLocale=${dataLocale}&interfaceLocale=${interfaceLocale}&userId=${userId}`;
     } catch (error) {
       console.log(error);
       response.statusCode = 500;
@@ -51,7 +60,14 @@ class AppService {
 
   private validateHmac = (req: Request, secret: string) => {
     const method = req.method.toUpperCase();
-    const hostUrl = process.env.QUABLE_APP_HOST_URL?.replace(/\/$/, '') || '';
+    const basePath = normalizeBasePath(
+      process.env.APP_BASE_PATH || process.env.QUABLE_APP_BASE_PATH,
+    );
+    const configuredHost =
+      process.env.QUABLE_APP_HOST_URL?.replace(/\/$/, '') || '';
+    const hostUrl = configuredHost.endsWith(basePath)
+      ? configuredHost.slice(0, configuredHost.length - basePath.length)
+      : configuredHost;
     const pathWithQuery = req.originalUrl.replace(/\/(?=\?)/, '');
     const endpoint = `${hostUrl}${pathWithQuery}`;
     const timestamp = req.headers['x-timestamp'];

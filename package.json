@@ -13,7 +13,8 @@
     "build": "rimraf ./dist && tsc --build tsconfig.json",
     "lint": "npx eslint --ext .ts src/",
     "start": "node -r module-alias/register ./dist --env=production",
-    "dev": "nodemon"
+    "dev": "nodemon",
+    "test": "jest"
   },
   "nodemonConfig": {
     "watch": [
@@ -52,15 +53,20 @@
     "@types/express": "^4.17.17",
     "@types/express-ejs-layouts": "^2.5.3",
     "@types/jsonwebtoken": "^9.0.5",
+    "@types/jest": "^29.5.12",
     "@types/morgan": "^1.9.4",
     "@types/node": "^24.3.1",
+    "@types/supertest": "^6.0.3",
     "@typescript-eslint/eslint-plugin": "^8.46.2",
     "@typescript-eslint/parser": "^8.46.2",
     "eslint": "^9.38.0",
     "eslint-plugin-n": "^17.23.1",
+    "jest": "^29.7.0",
     "nodemon": "^3.0.1",
     "prisma": "^6.18.0",
+    "supertest": "^7.0.0",
     "ts-node": "^10.9.1",
+    "ts-jest": "^29.3.4",
     "typescript": "^5.1.6"
   }
 }
