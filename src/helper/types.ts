@@ -11,5 +11,6 @@ export interface SessionData {
 export interface CustomRequest extends Request {
   customer: string | undefined;
   quableInstance: QuableInstance;
-  rawBody: Buffer<ArrayBuffer> | undefined
+  rawBody: Buffer<ArrayBuffer> | undefined;
+  pathWithoutBase?: string;
 }

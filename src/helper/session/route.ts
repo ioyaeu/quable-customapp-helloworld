@@ -1,23 +1,21 @@
 import { databaseService } from 'src/services/database.service';
 import { Response } from 'express';
 import { SessionData, CustomRequest } from '../types';
+import { stripBasePath } from '../base-path';
 
-const unProtectedRoutes = [
-  '/install',
-  '/uninstall',
-  '/permission',
-  '/webhook',
-];
+const unProtectedRoutes = ['/install', '/uninstall', '/permission', '/webhook'];
 
-export const isPublicRoute = (req: CustomRequest) => {
+export const isPublicRoute = (req: CustomRequest, pathWithoutBase?: string) => {
+  const pathToCheck = pathWithoutBase || stripBasePath(req.path, '/');
+
   const isOldThirdPartyCall =
-    req.path === '/' &&
+    pathToCheck === '/' &&
     req.method === 'POST' &&
     req.app?.settings?.application_type === 'document';
 
   const isUnprotectedRoute = unProtectedRoutes.some((route) => {
     const pattern = new RegExp(`^${route}(/|$|\\?)`);
-    return pattern.test(req.path);
+    return pattern.test(pathToCheck);
   });
 
   const isAnAsset = /\.\w+(\?.*)?$/.test(req.url);
@@ -25,9 +23,9 @@ export const isPublicRoute = (req: CustomRequest) => {
   return isOldThirdPartyCall || isUnprotectedRoute || isAnAsset;
 };
 
-export function isNewThirdPartyCall(req: CustomRequest) {
+export function isNewThirdPartyCall(req: CustomRequest, pathWithoutBase: string) {
   return (
-    req.path === '/' &&
+    pathWithoutBase === '/' &&
     req.method === 'GET' &&
     req.query.quableInstanceName &&
     req.query.dataLocale &&
@@ -61,22 +59,15 @@ export async function finalizeRequest(
   res: Response,
   decodedSession: SessionData,
   authToken: string,
+  pathWithoutBase: string,
 ) {
   const quableInstance = await validateQuableInstance(
     decodedSession.quableInstanceName,
   );
 
-  const customerName = req.path.split('/')[1];
-  if (
-    req.path !== '/' &&
-    (!customerName || decodedSession.quableInstanceName !== customerName)
-  ) {
-    throw new Error(
-      'Bad request: The customer was not found or does not match this cookie signature.',
-    );
-  }
   req.customer = decodedSession.quableInstanceName;
   req.quableInstance = quableInstance;
+  req.pathWithoutBase = pathWithoutBase;
   res.locals.customer = decodedSession.quableInstanceName;
   res.locals.interfaceLocale = decodedSession.interfaceLocale;
   res.locals.dataLocale = decodedSession.dataLocale;

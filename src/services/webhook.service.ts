@@ -3,6 +3,7 @@ import { QuablePimClient } from '@quable/quable-pim-js';
 import { databaseService } from './database.service';
 import { RESOURCES_ID } from '../helper/constants';
 import { keyValueService } from './keyvalue.service';
+import { applyBasePath, normalizeBasePath } from '../helper/base-path';
 
 class WebhookService {
 
@@ -14,10 +15,17 @@ class WebhookService {
             name: RESOURCES_ID,
         });
         let webhook = webhooks.length ? webhooks[0] : null;
+        const basePath = normalizeBasePath(
+            process.env.APP_BASE_PATH || process.env.QUABLE_APP_BASE_PATH,
+        );
+        const hostWithBasePath = applyBasePath(
+            process.env.QUABLE_APP_HOST_URL || '',
+            basePath,
+        );
         const payload = {
             name: RESOURCES_ID,
             active: true,
-            url: `${process.env.QUABLE_APP_HOST_URL}/webhook/${name}`,
+            url: `${hostWithBasePath}/webhook/${name}`,
             events: ['document.update'],
         };
         if (!webhook) {
