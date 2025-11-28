@@ -43,6 +43,9 @@ cp .env.dist .env
 DATABASE_URL=file:./dev.db 
 QUABLE_APP_PORT=4000
 QUABLE_APP_HOST_URL=https://votre-url.com
+# (optionnel) Préfixe d'URL si l'application est servie sous un sous-répertoire
+# Exemple : /quableapps/helloworld
+QUABLE_APP_BASE_PATH=/
 ```
 
 Pour l'URL, n'hésitez pas à utilier un tunnel pour que le PIM puisse joidnre votre application lancée localement.
@@ -85,6 +88,43 @@ npm run build && npm start
 | `/` | POST | Lancement de slot |
 | `/webhook/{instance}` | POST | Réception webhooks |
 | `/slot/{slotName}` | GET | Affichage slot iframe |
+
+## 🌐 Déploiement (root vs sous-répertoire)
+
+L'application peut être exposée directement à la racine d'un host ou derrière un proxy sur un sous-chemin. Dans les deux cas, conservez `QUABLE_APP_HOST_URL` sans slash final et ajustez `QUABLE_APP_BASE_PATH`.
+
+### A. Déploiement à la racine
+
+- `.env` : `QUABLE_APP_BASE_PATH=/`
+- Reverse proxy (ex. nginx) minimal :
+
+```nginx
+location / {
+  proxy_pass http://127.0.0.1:4000;
+  proxy_set_header Host $host;
+  proxy_set_header X-Real-IP $remote_addr;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+### B. Déploiement derrière un sous-répertoire
+
+- `.env` : `QUABLE_APP_BASE_PATH=/quableapps/helloworld`
+- Aucun réécriture complexe nécessaire : toutes les routes et assets utilisent automatiquement le préfixe.
+- Exemple nginx :
+
+```nginx
+location /quableapps/helloworld/ {
+  proxy_pass http://127.0.0.1:4000;
+  proxy_set_header Host $host;
+  proxy_set_header X-Real-IP $remote_addr;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+> Astuce : gardez `proxy_pass` avec un chemin vide (pas de trailing slash additionnel) pour conserver l'URL complète côté application. Les assets (`/styles`, `/scripts`) et les routes de slots (`/slot/...`) seront automatiquement résolus avec `QUABLE_APP_BASE_PATH`.
 
 ### Flow de fonctionnement
 
